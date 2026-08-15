@@ -1,0 +1,21 @@
+services:
+  capgo:
+    build: .
+    restart: unless-stopped
+    environment:
+      # Must be the HTTPS URL devices will reach. Both iOS and Android refuse a
+      # plain-HTTP bundle download, and the failure is silent on the device.
+      PUBLIC_URL: ${PUBLIC_URL:?set PUBLIC_URL}
+      API_KEY: ${API_KEY:?set API_KEY}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    volumes:
+      - capgo-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  capgo-data:

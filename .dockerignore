@@ -1,0 +1,6 @@
+capgo-selfhost
+data/
+testdata/
+*.db
+.git/
+README.md
