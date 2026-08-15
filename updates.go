@@ -113,8 +113,11 @@ func (s *Server) resolveChannel(i AppInfos) (*Channel, error) {
 		if err != nil {
 			return nil, err
 		}
-		// A channel the app asks for by name is only honoured if it opted in.
-		if c != nil && (c.Public || c.AllowSelfSet) {
+		// defaultChannel is baked into the app binary at build time, so a
+		// staging build asking for the staging channel is honoured whatever the
+		// channel's flags say. allow_self_set governs the *runtime*
+		// setChannel() path only — see handleChannelSelf.
+		if c != nil {
 			return c, nil
 		}
 	}

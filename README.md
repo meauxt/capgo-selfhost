@@ -94,6 +94,16 @@ the fallback for any device with no explicit assignment. Additional channels
 - **allow_self_set**: the app may move itself onto the channel at runtime via
   `CapacitorUpdater.setChannel()`. Leave it off for channels you assign yourself.
 
+Resolution order for an update check is: the channel the device was explicitly
+assigned to → the `defaultChannel` the app declares in its Capacitor config →
+the app's public channel.
+
+`defaultChannel` is honoured for **any** channel that exists, including private
+ones — it is compiled into the app binary, so a staging build asking for the
+staging channel is a build-time decision, not something a device chooses.
+`allow_self_set` gates only the runtime `setChannel()` path, where the request
+really does come from the device.
+
 Pointing a channel at an older bundle is a valid rollback: the server serves
 whatever the channel points at, and only skips when the device already runs
 that exact version.

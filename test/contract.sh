@@ -121,6 +121,21 @@ R=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/admin")
 R=$(curl -s -u "admin:$KEY" "$BASE/admin")
 check "1.2.48" "$R"; check "capgo-selfhost" "$R"; echo "ok: admin renders bundles"
 
+echo "--- 20. defaultChannel from the app config reaches a private channel"
+# Regression: defaultChannel is compiled into the binary, so it must work for a
+# channel that is neither public nor self-assignable. Gating it on those flags
+# made staging builds silently fall back to production.
+curl -s -X POST -H "Authorization: Bearer $KEY" "$BASE/api/apps/$APP/channels/staging" > /dev/null
+curl -s -X POST -H "Authorization: Bearer $KEY" "$BASE/api/apps/$APP/channels/staging/bundle?version=1.2.48" > /dev/null
+R=$(curl -s -X POST -H 'Content-Type: application/json' \
+  -d "$(infos dev-d builtin staging)" "$BASE/updates")
+check '"version":"1.2.48"' "$R"; echo "ok: $R"
+
+echo "--- 21. ...but runtime self-assignment to it is still refused"
+R=$(curl -s -X POST -H 'Content-Type: application/json' \
+  -d "$(infos dev-d builtin '' ',"channel":"staging"')" "$BASE/channel_self")
+check "channel_not_self_assignable" "$R"; echo "ok"
+
 rm -rf "$W"
 echo
-echo "ALL 19 CHECKS PASSED"
+echo "ALL 21 CHECKS PASSED"
