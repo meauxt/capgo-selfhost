@@ -236,10 +236,29 @@ func (s *Server) handleChannelSelf(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, out)
 
 	case http.MethodPut:
-		ch, err := s.resolveChannel(i)
-		if err != nil || ch == nil {
-			writeJSON(w, http.StatusOK, map[string]any{
-				"error": "channel_not_found", "message": "no channel for this device"})
+		// Report ONLY an explicit assignment made via setChannel().
+		//
+		// The plugin persists whatever channel name this returns into
+		// DEFAULT_CHANNEL_PREF_KEY, and that stored value outranks the
+		// `defaultChannel` compiled into the app config on every later launch.
+		// Returning the *resolved* channel here — which for an unassigned
+		// device is the public fallback — therefore silently pins the device to
+		// "production" forever, and a later build shipping
+		// `defaultChannel: 'dev'` is ignored. Answering 400 channel_not_found
+		// is the contract the plugin expects: it falls back to its configured
+		// defaultChannel and persists nothing.
+		var ch *Channel
+		if i.DeviceID != "" {
+			ch, err = s.store.DeviceChannel(i.AppID, i.DeviceID)
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "server_error"})
+				return
+			}
+		}
+		if ch == nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"error":   "channel_not_found",
+				"message": "device has no explicit channel assignment"})
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{

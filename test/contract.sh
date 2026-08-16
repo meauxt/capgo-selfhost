@@ -87,6 +87,18 @@ echo "--- 13. PUT reports the pinned channel"
 R=$(curl -s -X PUT -H 'Content-Type: application/json' -d "$(infos dev-b builtin)" "$BASE/channel_self")
 check '"channel":"beta"' "$R"; echo "ok: $R"
 
+echo "--- 13b. PUT for an UNASSIGNED device must 400 channel_not_found"
+# Regression: returning the resolved fallback here makes the plugin persist it
+# into DEFAULT_CHANNEL_PREF_KEY, which then outranks the defaultChannel compiled
+# into the app config — permanently pinning the device to the public channel.
+CODE=$(curl -s -o /tmp/put-unassigned.json -w '%{http_code}' -X PUT \
+  -H 'Content-Type: application/json' -d "$(infos dev-fresh builtin)" "$BASE/channel_self")
+[ "$CODE" = 400 ] || fail "expected 400 for unassigned device, got $CODE"
+check "channel_not_found" "$(cat /tmp/put-unassigned.json)"
+grep -q '"channel"' /tmp/put-unassigned.json && fail "must not return a channel name for an unassigned device"
+rm -f /tmp/put-unassigned.json
+echo "ok: 400 channel_not_found, no channel name leaked"
+
 echo "--- 14. beta device gets no update (beta channel is empty), prod device still does"
 R=$(curl -s -X POST -H 'Content-Type: application/json' -d "$(infos dev-b builtin)" "$BASE/updates")
 check "No new version available" "$R"
@@ -138,4 +150,4 @@ check "channel_not_self_assignable" "$R"; echo "ok"
 
 rm -rf "$W"
 echo
-echo "ALL 21 CHECKS PASSED"
+echo "ALL 22 CHECKS PASSED"
